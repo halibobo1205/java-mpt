@@ -157,7 +157,7 @@
     <dependency>
       <groupId>org.rocksdb</groupId>
       <artifactId>rocksdbjni</artifactId>
-      <version>7.8.3</version>
+      <version>5.15.10</version>
     </dependency>
 
 
