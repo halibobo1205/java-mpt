@@ -16,10 +16,15 @@ package org.hyperledger.besu.ethereum.trie;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.hyperledger.besu.storage.InMemoryKeyValueStorage;
 import org.hyperledger.besu.storage.KeyValueStorage;
+import org.hyperledger.besu.storage.RocksDBConfiguration;
+import org.hyperledger.besu.storage.RocksDBConfigurationBuilder;
+import org.hyperledger.besu.storage.RocksDBKeyValueStorage;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.function.Function;
@@ -31,10 +36,25 @@ public class StoredMerklePatriciaTrieTest extends AbstractMerklePatriciaTrieTest
   private MerkleStorage merkleStorage;
   private Function<String, Bytes> valueSerializer;
   private Function<Bytes, String> valueDeserializer;
+  @Rule
+  public final TemporaryFolder folder = new TemporaryFolder();
+
+  protected KeyValueStorage createStore() {
+    try {
+      return new RocksDBKeyValueStorage(config());
+    } catch (IOException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
+  private RocksDBConfiguration config() throws IOException {
+    return new RocksDBConfigurationBuilder().databaseDir(folder.newFolder().toPath()).build();
+  }
 
   @Override
   protected MerklePatriciaTrie<Bytes, String> createTrie() {
-    keyValueStore = new InMemoryKeyValueStorage();
+    keyValueStore = createStore();
     merkleStorage = new KeyValueMerkleStorage(keyValueStore);
     valueSerializer =
         value -> (value != null) ? Bytes.wrap(value.getBytes(StandardCharsets.UTF_8)) : null;
@@ -52,6 +72,7 @@ public class StoredMerklePatriciaTrieTest extends AbstractMerklePatriciaTrieTest
     final String value1 = "value1";
     trie.put(key1, value1);
     final Bytes32 hash1 = trie.getRootHash();
+    // put data into pendingUpdates
     trie.commit(merkleStorage::put);
 
     final String value2 = "value2";
@@ -59,11 +80,13 @@ public class StoredMerklePatriciaTrieTest extends AbstractMerklePatriciaTrieTest
     final String value3 = "value3";
     trie.put(key3, value3);
     final Bytes32 hash2 = trie.getRootHash();
+    // put data into pendingUpdates
     trie.commit(merkleStorage::put);
 
     final String value4 = "value4";
     trie.put(key1, value4);
     final Bytes32 hash3 = trie.getRootHash();
+    // put data into pendingUpdates
     trie.commit(merkleStorage::put);
 
     // Check the root hashes for 3 tries are all distinct
