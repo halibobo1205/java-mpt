@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatRuntimeException;
 
 public class StoredMerklePatriciaTrieTest extends AbstractMerklePatriciaTrieTest {
   private KeyValueStorage keyValueStore;
@@ -60,6 +61,18 @@ public class StoredMerklePatriciaTrieTest extends AbstractMerklePatriciaTrieTest
         value -> (value != null) ? Bytes.wrap(value.getBytes(StandardCharsets.UTF_8)) : null;
     valueDeserializer = bytes -> new String(bytes.toArrayUnsafe(), StandardCharsets.UTF_8);
     return new StoredMerklePatriciaTrie<>(merkleStorage::get, valueSerializer, valueDeserializer);
+  }
+
+  @Test
+  public void putEmpty() {
+    final Bytes key0 = Bytes.of(1, 9, 8, 9);
+    // Push some values into the trie and commit changes so nodes are persisted
+    final String value0 = "";
+    trie.put(key0, value0);
+    // put data into pendingUpdates
+    trie.commit(merkleStorage::put);
+    assertThatRuntimeException().isThrownBy(() -> trie.get(key0))
+            .withMessageContaining("leaf has null value");
   }
 
   @Test
