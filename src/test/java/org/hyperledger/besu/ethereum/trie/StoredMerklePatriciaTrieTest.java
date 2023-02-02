@@ -26,6 +26,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -154,5 +156,26 @@ public class StoredMerklePatriciaTrieTest extends AbstractMerklePatriciaTrieTest
     assertThat(trie.get(key1)).isEqualTo(Optional.of("value4"));
     assertThat(trie.get(key2)).isEqualTo(Optional.of("value2"));
     assertThat(trie.get(key3)).isEqualTo(Optional.of("value3"));
+    final Bytes key4 = Bytes.of(1,3,4,6,7,9);
+    final Bytes key5 = Bytes.of(1,3,4,6,3,9);
+    final Bytes key6 = Bytes.of(1,3,4,6,8,9);
+    trie.put(key4, "value5");
+    trie.put(key5, "value6");
+    trie.put(key6, "value7");
+    trie.put(key5, "value8");
+    trie.commit(merkleStorage::put);
+    merkleStorage.commit();
+
+    List<Bytes> keys = new ArrayList<>();
+    trie.visitAll((N) -> {
+        if (N instanceof LeafNode) {
+          Bytes k = CompactEncoding.pathToBytes(
+                  Bytes.concatenate(N.getLocation().orElse(Bytes.EMPTY),
+                  N.getPath()));
+          keys.add(k);
+        }
+    });
+    assertThat(keys.size()).isEqualTo(6);
+    assertThat(keys).containsExactly(key5, key4, key6, key1, key2, key3);
   }
 }
