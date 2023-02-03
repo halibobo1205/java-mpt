@@ -26,10 +26,10 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.security.SecureRandom;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatRuntimeException;
@@ -159,23 +159,51 @@ public class StoredMerklePatriciaTrieTest extends AbstractMerklePatriciaTrieTest
     final Bytes key4 = Bytes.of(1,3,4,6,7,9);
     final Bytes key5 = Bytes.of(1,3,4,6,3,9);
     final Bytes key6 = Bytes.of(1,3,4,6,8,9);
+    final Bytes key7= Bytes.of(2);
+    final Bytes key8= Bytes32.random();
+    final Bytes key9= Bytes.wrap(key8, key7);
     trie.put(key4, "value5");
     trie.put(key5, "value6");
     trie.put(key6, "value7");
     trie.put(key5, "value8");
+    trie.put(key7, "value9");
+    trie.put(key8, "value10");
+    trie.put(key9, "value11");
+    Random r = new SecureRandom();
+    List<Bytes> rl = new ArrayList<>();
+    for (int i =1 ; i<= 1000; i++) {
+      byte[] array = new byte[i%256];
+      r.nextBytes(array);
+      Bytes bytes = Bytes.wrap(array);
+      rl.add(bytes);
+      trie.put(bytes, UUID.randomUUID().toString());
+    }
+    rl.addAll(Arrays.asList(key1,key2,key3,key4,key5,key6,key7, key8, key9));
     trie.commit(merkleStorage::put);
     merkleStorage.commit();
 
     List<Bytes> keys = new ArrayList<>();
     trie.visitAll((N) -> {
-        if (N instanceof LeafNode) {
-          Bytes k = CompactEncoding.pathToBytes(
-                  Bytes.concatenate(N.getLocation().orElse(Bytes.EMPTY),
-                  N.getPath()));
-          keys.add(k);
-        }
+      if (N instanceof BranchNode && N.getValue().isPresent()) {
+        Bytes k = CompactEncoding.pathToBytes(
+                Bytes.concatenate(N.getLocation().orElse(Bytes.EMPTY),
+                        Bytes.of(CompactEncoding.LEAF_TERMINATOR)));
+        keys.add(k);
+      }
+
+      if (N instanceof LeafNode) {
+        Bytes k = CompactEncoding.pathToBytes(
+                Bytes.concatenate(N.getLocation().orElse(Bytes.EMPTY),
+                        N.getPath()));
+        keys.add(k);
+      }
     });
-    assertThat(keys.size()).isEqualTo(6);
-    assertThat(keys).containsExactly(key5, key4, key6, key1, key2, key3);
+
+    Collections.sort(keys);
+    Collections.sort(rl);
+    rl = rl.stream().distinct().collect(Collectors.toList());
+    assertThat(trie.get(key7)).isEqualTo(Optional.of("value9"));
+    assertThat(keys.size()).isEqualTo(rl.size());
+    assertThat(keys).isEqualTo(rl);
   }
 }
