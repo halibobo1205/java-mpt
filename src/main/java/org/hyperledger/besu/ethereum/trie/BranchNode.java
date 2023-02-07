@@ -27,7 +27,7 @@ import java.util.function.Function;
 
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 
-class BranchNode<V> implements Node<V> {
+public class BranchNode<V> implements Node<V> {
   public static final byte RADIX = CompactEncoding.LEAF_TERMINATOR;
 
   @SuppressWarnings("rawtypes")

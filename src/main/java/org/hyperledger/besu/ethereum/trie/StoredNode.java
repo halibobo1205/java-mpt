@@ -21,7 +21,7 @@ import org.hyperledger.besu.ethereum.rlp.RLP;
 import java.util.List;
 import java.util.Optional;
 
-class StoredNode<V> implements Node<V> {
+public class StoredNode<V> implements Node<V> {
   private final StoredNodeFactory<V> nodeFactory;
   private final Bytes location;
   private final Bytes32 hash;

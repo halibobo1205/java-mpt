@@ -28,7 +28,7 @@ import java.util.function.Function;
 
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 
-class LeafNode<V> implements Node<V> {
+public class LeafNode<V> implements Node<V> {
   private final Optional<Bytes> location;
   private final Bytes path;
   private final V value;
